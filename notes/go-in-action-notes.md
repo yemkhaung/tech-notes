@@ -202,5 +202,53 @@ func readSomeFile() {
 
 ### RSS matcher
 
-* 
+* `encoding/xml` : builtin library to encode/decode **xml** files
+* `net/http` : simple built-in library to make **HTTP** requests.
+* `append` built-in function to add items (with dynamic resizing functionality)
+
+
+
+### Summary
+
+* **Packaging system** `Code file -> Package -> Folder`
+* Use `pointers` to **share data** across *functions* and *goroutines*
+* **Concurrency** -> *goroutines*, **Synchronization** -> *Channels*
+* Go include many **built-in functions** to support data structures and daily programming requirements.
+* **Interfaces** allows *generic* code and *frameworks*.
+
+
+
+## Chapter 3 : Packaging and Tooling
+
+> Tha idea is to separate semantic units of functionality into different packages. When you do this, you enable code reuse and control the use of the data inside each package. 
+
+
+
+* **Packages** : 
+  * small, reusable, single-functionality group of files organized into same directory
+  * All *.go* files must have package declared in first line of code
+  * Packages can only live in **single directory**
+    * no multiple packages in same directory
+    * single packages cannot be split across multiple directories
+* `net`  standard library is broken down into packages such as `http`, `cookiejar` , etc so that developers don't need to import the code that is not needed.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
