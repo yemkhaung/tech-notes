@@ -6,10 +6,14 @@ Notes from book reading **Go In Action** by *Brian Kettlesin* and *Erik Saint Ma
 
 #### Go the *SUPER*
 
-* Simple ways to embrace **concurrency** (use multi-core processors efficiently)
+* Simple ways to embrace **concurrency**  that suits to modern computing environment (clusters/cloud computing, multi-core processors)
+* Lightning-fast **compiler**
+  - efficient dependency management
+  - every file compiled ONLY ONCE
+  - only imported sub package is compiled)
 * **Packing system** for easy code sharing (for many teams developing many small packages, libraries)
 * *Simple and Effective* **type-system** that rethinks the overhead of complex traditional *Object-oriented* development and enables code reuse
-* Lightning-fast **compiler**
+* * 
 * Balances **rapid development** of high-leve languages(Ruby, Python) with **performant** low-level languages (C,C++)
 * automatic memory management with built-in **Garbage Collector**
 
@@ -224,15 +228,101 @@ func readSomeFile() {
 
 
 
-* **Packages** : 
-  * small, reusable, single-functionality group of files organized into same directory
-  * All *.go* files must have package declared in first line of code
-  * Packages can only live in **single directory**
-    * no multiple packages in same directory
-    * single packages cannot be split across multiple directories
-* `net`  standard library is broken down into packages such as `http`, `cookiejar` , etc so that developers don't need to import the code that is not needed.
+#### Packages
 
+* small, reusable, single-functionality group of files organized into same directory
+* All *.go* files must have package declared in first line of code
+* Packages can only live in **single directory**
+  * no multiple packages in same directory
+  * single packages cannot be split across multiple directories
+* For e.g, `net`  standard library is broken down into packages such as `http`, `cookiejar` , etc so that developers don't need to import the code that is not needed.
 
+####Naming Convention
+
+* *packages* should have the **SAME** name as *directory* name
+* unique name is not necessary since *packages* are imported using full-path
+* package name is used by default as import name but can be *overidden*.
+
+#### Package main
+
+* package `main` means the package can make executable binary file.
+* contains the method `main()` from where the program starts running.
+* executable package are a.k.a **commands**
+
+#### Imports
+
+* when import, compiler looks for packages in following locaions in order
+  * Go installation directory (`/usr/local/go`)
+  * `GOPATH` env variable path
+* for developing that will be shared as libraries/packages, put them under `GOPATH/src`
+* Imported packages are required use in code otherwise compiler will give an error
+  * this eliminates unused, bloated imports problem that can be found in other languages
+
+#### Remote Imports
+
+* supports tools to fetch code from distributed VCS (GitHub, Bitbucket, etc)
+
+* `go get` fetches code over network and puts them inside `GOPATH` so compiler can find them when building dependencies.
+
+  ```go
+  import "github.com/spf13/viper"
+  ```
+
+#### Named Imports
+
+* *Named imports* to avoid import duplication when packages have same name.
+
+  ```go
+  import (
+  	"fmt"
+  	myfmt "mylib/fmt"
+  )
+  ```
+
+#### Go Tools
+
+* **go build** : compiles a .go file and creates executeble binary file (cross-platform)
+* **go get** : get a remote package from a given URL (e.g GitHub)
+* **go run** : executes the compiled executable binary
+* **go vet** : checks basic common errors like lacking function parameter, method signature error ,etc
+* **go fmt** : formats the go code to predetermined layout
+* **go doc** : grabs and shows the documentation of a package 
+  * or use  `godoc -http=6060` command to browse the whole documentation repo in web browser at `localhost:6060`
+  * Can also include your code Comments into `go doc` documentation if you follow certain convention
+
+#### Dependency Management
+
+> Built-in go tools does not have proper support managing *different versions* of packages and *reproducible builds* because Go was mainly designed for code sharing and expects everyone to share the latest version.
+
+* **godep** and **vendor** are tools that wraps go tooling that uses technique like *vendoring* and *import-path-rewriting* that follows steps as below
+
+  * copy all third-party/vendor dependencies into project directory
+  * rewrite import path
+
+* **Gb ** : provides reproducible build tool without wrapping Go tools or `GOPATH`
+
+  * project based approach
+  * all versioned dependencies are put under `/vendor` path inside project root directory
+  * Gb tool looks for packages in import firstly under `/vendor/src`  if they are not found under the `/src` subdirectories.
+  * not compatible with Go tooling and needs separate command for builds
+
+  ```bash
+  gb build all
+  ```
+
+### Summary
+
+* Packages are the basic unit of code organization in Go.
+* Your GOPATH determines on disk where Go source code is saved, compiled, and
+  installed.
+* You can set your GOPATH for each different project, keeping all of your source
+  and dependencies separate 
+* You can use packages created by other people by using go get to fetch and
+  install them in your GOPATH.
+* Go was designed with code sharing as a central driving feature of the language.
+  * It’s recommended that you use vendoring to manage dependencies.
+  * There are several community-developed tools for dependency management
+    such as godep, vendor, and gb.
 
 
 
