@@ -326,19 +326,348 @@ func readSomeFile() {
 
 
 
+## Chapter 4 : Arrays, Slices and Maps
 
 
 
+### 1) Array internals and fundamentals
+
+* basic data structure that supports *Slices and Maps*
+* **fixed** length, **continuous** block of items of **same** type
+* initialized to item's zero-value when being declared
+* array's *type or length* cannot be changed after declaration
+
+```go
+// Declare an integer array of five elements.
+// Initialize each element with a specific value.
+array := [5]int{10, 20, 30, 40, 50}
+
+// Declare an integer array.
+// Initialize each element with a specific value.
+// Capacity is determined based on the number of values initialized.
+array := [...]int{10, 20, 30, 40, 50}
+
+// Declare an integer array of five elements.
+// Initialize index 1 and 2 with specific values.
+// The rest of the elements contain their zero value.
+array := [5]int{1: 10, 2: 20}
+```
+
+* **arrays are values** in Go
+
+  * when you assign an array to other array, you get two arrays with two copies of the same value
+
+  ```go
+  // Declare a string array of five elements.
+  var array1 [5]string
+  // Declare a second string array of five elements.
+  // Initialize the array with colors.
+  array2 := [5]string{"Red", "Blue", "Green", "Yellow", "Pink"}
+  // Copy the values from array2 into array1.
+  array1 = array2
+  ```
+
+  * use *pointers* to share values inside arrays (for example, passing arrays between *functions* or *Goroutines*) for better performance
+
+  ```go
+  // Allocate a LARGE array of 8 megabytes.
+  var array [1e6]int
+  // Pass the address of the array to the function foo.
+  foo(&array)
+  // Function foo accepts a pointer to an array of one million integers.
+  func foo(array *[1e6]int) {
+  ...
+  }
+  ```
 
 
 
+### 2) Slices internals and fundamentals
+
+> basic data structure to handle collections of data
 
 
 
+#### Internals
+
+* Tiny objects that *abstracts* and *manipulates* *underlying array*
+* **Dynamic** arrays that can **expand** or **shrink**
+* Slices uses *three* *metadata* to manipulate arrays
+  * **Pointer** to array (i.e memory location)
+  * **Size** : length of array that slice can have access
+  * **Capacity** : length of underlying array
+* Since **slices use pointers**, they *share the array data value in memory* when *creating* new slices  or *appending* the original slice
 
 
 
+####Making slices
+
+* `make` built-in function
+
+```go
+// Create a slice of strings.
+// Contains a length and capacity of 5 elements.
+slice := make([]string, 5)
+
+// Create a slice of integers.
+// Contains a length of 3 and has a capacity of 5 elements.
+slice := make([]int, 3, 5)
+```
+
+* **slice literal**
+
+```go
+// Create a slice of strings.
+// Contains a length and capacity of 5 elements.
+slice := []string{"Red", "Blue", "Green", "Yellow", "Pink"}
+```
+
+* `nil` slice (useful when returning error case from a function that returns a slice)
+
+```
+// Create a nil slice of integers.
+var slice []int
+```
+
+* **empty slice**
+
+```go
+// Use make to create an empty slice of integers.
+slice := make([]int, 0)
+// Use a slice literal to create an empty slice of integers.
+slice := []int{}
+```
 
 
 
+#### Adding elements to slices
 
+* slices can be appended using built-in function `append()`
+  * `append` can accept multiple values, or even use `...` operator to append elements inside another slice
+
+```go
+// Create a slice of integers.
+// Contains a length and capacity of 5 elements.
+slice := []int{10, 20, 30, 40, 50}
+// Create a new slice.
+// Contains a length of 2 and capacity of 4 elements.
+newSlice := slice[1:3]
+// Allocate a new element from capacity.
+// Assign the value of 60 to the new element.
+newSlice = append(newSlice, 60)
+
+// resulting array
+slice
+[10, 20, 30 60, 50]
+```
+
+* Appending on `newSlice` will affect *index3* of original `slice` since they share the same array under the hood.
+* If underlying array has no more capacity left, `append()` function will create a new array and copy the values
+  * `append()` function is clever that *capacity is doubled* for under 1,000 elements array. 1.25%, 25% for larger arrays
+* **[WARNING]** It is easy to get lost what slices use which underlying array and suddenly changes are affected to other slices. Use **three-index-slices** with same length and capacity.
+
+```go
+// Create a slice of strings.
+// Contains a length and capacity of 5 elements.
+source := []string{"Apple", "Orange", "Plum", "Banana", "Grape"}
+// Slice the third element and restrict the capacity.
+// Contains a length and capacity of 1 element.
+slice := source[2:3:3]
+// Append a new string to the slice.
+slice = append(slice, "Kiwi")
+```
+
+* appending to `slice` in above, will create a new array since its capacity is not enough thus avoid changes to underlying array that `source` is also referenced.
+
+
+
+#### Iterating slices
+
+* `for range` can be used to iterate over slices
+
+```go
+// Create a slice of integers.
+// Contains a length and capacity of 4 elements.
+slice := []int{10, 20, 30, 40}
+// Iterate over each element and display each value.
+for index, value := range slice {
+fmt.Printf("Index: %d Value: %d\n", index, value)
+}
+```
+
+* **[Warning]** Since `for range` copy values from original slice, if you use pointers to make changes to underlying array, only the copy value will be affected.
+
+```go
+// Create a slice of integers.
+// Contains a length and capacity of 4 elements.
+slice := []int{10, 20, 30, 40}
+// Iterate over each element and display the value and addresses.
+for index, value := range slice {
+fmt.Printf("Value: %d Value-Addr: %X ElemAddr: %X\n",
+value, &value, &slice[index])
+}
+Output:
+Value: 10 Value-Addr: 10500168 ElemAddr: 1052E100
+Value: 20 Value-Addr: 10500168 ElemAddr: 1052E104
+Value: 30 Value-Addr: 10500168 ElemAddr: 1052E108
+Value: 40 Value-Addr: 10500168 ElemAddr: 1052E10C
+// the address for the value variable is always the same because it’s a variable that contains a copy
+```
+
+
+
+#### Passing slices between functions
+
+* *very cheap* since slice contains only metada ( array address, size integer, etc) even if value is copied to pass.
+
+- *On a 64-bit architecture, a slice requires 24 bytes of memory. The pointer field*
+  *requires 8 bytes, and the length and capacity fields require 8 bytes respectively.*
+
+```go
+// Allocate a slice of 1 million integers.
+slice := make([]int, 1e6)
+// Pass the slice to the function foo.
+slice = foo(slice)
+// Function foo accepts a slice of integers and returns the slice back.
+func foo(slice []int) []int {
+...
+return slice
+}
+```
+
+
+
+### 3) Maps internals and fundamentals
+
+> **unordered*** collection of ***key/value*** pairs
+
+
+
+####Internals
+
+* implemented using ***hash table***
+
+  * there are two main parts in a map
+    * buckets
+    * data
+  * map entries are grouped into ***buckets*** (*an array of hashes*)
+  * *bucket location* or *index* or *hash* is determined by passing the *entry key* to the *hash-function* (*a hash contains 16 bit numeric value*)
+  * the better the *hash-function*, the more evenly it will distribute the *entries* across the *buckets*, the quicker you can find *entries*, the better the performance of the *map*
+
+
+  ![go-maps](https://www.ardanlabs.com/images/goinggo/Screen+Shot+2013-12-31+at+7.01.15+PM.png)
+
+  * Lower order bit (LOB) is used to select the hash (*LOB is mostly the lower-half  (8 bit binary) of the 16 bit numeric that was generated from key*)
+  * As in figure, for data part of the map, there are two sub data structures
+    * an array of *top eight Higher Order Bits (HOB)*, that separate entries in each respective bucket
+    * an array of bytes that contains stores key/value pairs for the respective bucket
+
+
+
+####Manipulation
+
+* *maps* can be created by using built-in `make()` function or using *map literals*
+
+  * using map literals is idiomatic way of map creation
+  * map *keys* can be any *primitive value* or *struct type* as long as it can be compared with `==` operator
+  * *slices, functions* and *struct* types that contain slices cannot be used as keys and will produce *compile error*
+  * meanwhile, *map value* can be of any type including *slices*
+
+  ```go
+  // Create a map with a key of type string and a value of type int.
+  dict := make(map[string]int)
+  // Create a map with a key and value of type string.
+  // Initialize the map with 2 key/value pairs.
+  dict := map[string]string{"Red": "#da1337", "Orange": "#e95a22"}
+  ```
+
+* **assigning** values to a map
+
+  ```go
+  // Create an empty map to store colors and their color codes.
+  colors := map[string]string{}
+  // Add the Red color code to the map.
+  colors["Red"] = "#da1337"
+  ```
+
+* can receive two return values when **retrieving** from map
+
+  - should always check if a map value exists
+
+  ```go
+  // Retrieve the value for the key "Blue".
+  value, exists := colors["Blue"]
+  // Did this key exist?
+  if exists {
+  	fmt.Println(value)
+  }
+  ```
+
+* **Iterating and removing**
+
+  ```go
+  // Create a map of colors and color hex codes.
+  colors := map[string]string{
+      "AliceBlue": "#f0f8ff",
+      "Coral": "#ff7F50",
+      "DarkGray": "#a9a9a9",
+      "ForestGreen": "#228b22",
+  }
+  // Display all the colors in the map.
+  for key, value := range colors {
+  	fmt.Printf("Key: %s Value: %s\n", key, value)
+  }
+  
+  // Remove the key/value pair for the key "Coral".
+  delete(colors, "Coral")
+  ```
+
+* `nil` maps
+
+  * can be useful when returning error case from a function
+
+  ```go
+  // Create a nil map by just declaring the map.
+  var colors map[string]string
+  // Add the Red color code to the map.
+  colors["Red"] = "#da1337"
+  
+  Runtime Error:
+  panic: runtime error: assignment to entry in nil map
+  ```
+
+
+
+####Passing maps between functions
+
+* Maps are designed to be cheap, similar to slices. That means, maps **are not copied when passing to functions.**
+* Modifying a map will reflect in all occurances to the map i.e in all functions that received and codes that are using the map
+
+
+
+### Summary
+
+* Arrays are the building blocks for both slices and maps.
+* Slices are the idiomatic way in Go you work with collections of data. Maps are
+  the way you work with key/value pairs of data.
+* The built-in function `make` allows you to create slices and maps with initial
+  length and capacity. Slice and map literals can be used as well and support setting
+  initial values for use.
+* Slices have a capacity restriction, but can be extended using the built-in function
+  `append`. Maps don’t have a capacity or any restriction on growth.
+* Through the use of composition, you can create multidimensional arrays and
+  slices. You can also create maps with values that are slices and other maps. A
+  slice can’t be used as a map key.
+* Passing a slice or map to a function is cheap and doesn’t make a copy of the
+  underlying data structure.
+
+
+
+## Chapter 5 : Go's Type System
+
+> Go is statically typed language. Compiler wants to know the type of every piece of value in the program. Knowing the type information ahead of time ensures to,
+>
+> *  reduce bugs of using the unsupported operations of a type in codes (will be warned in compile time)
+> *  Type declarations as auto-checked documentation for code and enables predictable, understandable code
+> *  as opposite of dynamically types languages, the runtime is more efficient since there is no type guessing 
+> *  Go also supports short-hand initialization which reduces the tedius work of type-casting when declaring new variables or receiving return values from functions
